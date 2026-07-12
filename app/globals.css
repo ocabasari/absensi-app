@@ -24,3 +24,61 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 1cm 2cm 2cm 3cm;
+  }
+
+  /* Sembunyikan elemen interaktif secara mutlak */
+  .no-print, 
+  button, 
+  form, 
+  input, 
+  select {
+    display: none !important;
+  }
+  
+  /* Pastikan body dan main transparan dan menampilkan seluruh isi */
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  main {
+    display: block !important;
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Paksa agar kontainer teks dan card riwayat muncul dan tidak tersembunyi */
+  div, p, span, img, h1, h2, h3 {
+    visibility: visible !important;
+  }
+
+  /* Cegah gambar terpotong di tengah halaman cetak */
+  img {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .max-w-3xl, 
+  .max-w-2xl, 
+  .max-w-md {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
