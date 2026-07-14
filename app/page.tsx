@@ -36,7 +36,7 @@ export default function AbsensiApp() {
   const [summaryRoleFilter, setSummaryRoleFilter] = useState<string>("all");
   const [summarySearchQuery, setSummarySearchQuery] = useState<string>("");
 
-  // State untuk Selected ID Approval Massal (Checkbox)
+  // State untuk Selected ID Approval/Delete Massal (Checkbox)
   const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<number[]>([]);
 
   // State untuk Edit User
@@ -171,7 +171,7 @@ export default function AbsensiApp() {
         alert("User baru berhasil didaftarkan dan terhubung ke Auth!");
       }
       form.reset();
-      setEditingUser(null); // Memastikan state kembali bersih ke mode tambah baru
+      setEditingUser(null);
       fetchUsers();
     } catch (error: any) {
       alert("Gagal memproses user: " + error.message);
@@ -343,12 +343,34 @@ export default function AbsensiApp() {
     }
   };
 
-  const toggleSelectAll = (filteredHistory: any[]) => {
-    const pendingIds = filteredHistory.filter(i => i.status_approval !== 'approved').map(i => i.id);
-    if (selectedAttendanceIds.length === pendingIds.length) {
+  // Fungsi Hapus Massal (Bulk Delete)
+  const handleBulkDelete = async () => {
+    if (selectedAttendanceIds.length === 0) {
+      alert("Pilih minimal satu data kehadiran untuk dihapus.");
+      return;
+    }
+    if (confirm(`Yakin ingin menghapus ${selectedAttendanceIds.length} data absensi yang dipilih?`)) {
+      const { error } = await supabase
+        .from('attendances')
+        .delete()
+        .in('id', selectedAttendanceIds);
+
+      if (error) {
+        alert("Gagal menghapus massal: " + error.message);
+      } else {
+        alert("Data absensi terpilih berhasil dihapus secara massal!");
+        setSelectedAttendanceIds([]);
+        fetchAttendances();
+      }
+    }
+  };
+
+  const toggleSelectAll = (filteredHistoryList: any[]) => {
+    const allIds = filteredHistoryList.map(i => i.id);
+    if (selectedAttendanceIds.length === allIds.length) {
       setSelectedAttendanceIds([]);
     } else {
-      setSelectedAttendanceIds(pendingIds);
+      setSelectedAttendanceIds(allIds);
     }
   };
 
@@ -593,6 +615,9 @@ export default function AbsensiApp() {
       sum.nama.toLowerCase().includes(summarySearchQuery.toLowerCase())
     );
 
+    const selectedItems = filteredHistoryList.filter(i => selectedAttendanceIds.includes(i.id));
+    const hasUnapprovedSelected = selectedItems.some(i => i.status_approval !== 'approved');
+
     return (
       <main className="min-h-screen p-8 bg-gray-100 flex flex-col items-center">
         <style dangerouslySetInnerHTML={{__html: `
@@ -811,7 +836,7 @@ export default function AbsensiApp() {
             )}
           </div>
 
-          {/* URUTAN UI 5: Daftar Kehadiran yang Masuk & Approval Massal */}
+          {/* URUTAN UI 5: Daftar Kehadiran yang Masuk & Aksi Massal */}
           <div className="mt-8 pt-6 border-t">
             <h2 className="text-sm font-bold text-gray-800 mb-4">5. Daftar Kehadiran yang Masuk</h2>
             
@@ -863,26 +888,40 @@ export default function AbsensiApp() {
               </div>
             )}
 
-            {/* Tombol Aksi Massal (Bulk Approve) */}
-            {role !== "atlet" && filteredHistoryList.length > 0 && (
-              <div className="mb-3 p-2 bg-blue-50 border border-blue-100 rounded flex justify-between items-center no-print text-xs">
-                <label className="flex items-center gap-2 cursor-pointer font-semibold text-blue-900">
-                  <input 
-                    type="checkbox" 
-                    onChange={() => toggleSelectAll(filteredHistoryList)}
-                    checked={selectedAttendanceIds.length > 0 && selectedAttendanceIds.length === filteredHistoryList.filter(i => i.status_approval !== 'approved').length}
-                  />
-                  Pilih Semua yang Belum Approve
-                </label>
-                <button 
-                  onClick={handleBulkApprove} 
-                  className="bg-blue-600 text-white py-1.5 px-3 rounded font-semibold hover:bg-blue-700 disabled:bg-gray-300"
-                  disabled={selectedAttendanceIds.length === 0}
-                >
-                  Setujui Terpilih ({selectedAttendanceIds.length})
-                </button>
-              </div>
-            )}
+            {/* Tombol Aksi Massal Dinamis */}
+            {role !== "atlet" && filteredHistoryList.length > 0 && (() => {
+              const selectedItems = filteredHistoryList.filter(i => selectedAttendanceIds.includes(i.id));
+              const unapprovedItems = selectedItems.filter(i => i.status_approval !== 'approved');
+              
+              return (
+                <div className="mb-3 p-2 bg-blue-50 border border-blue-100 rounded flex justify-between items-center no-print text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-blue-900">
+                    <input 
+                      type="checkbox" 
+                      onChange={() => toggleSelectAll(filteredHistoryList)}
+                      checked={selectedAttendanceIds.length > 0 && selectedAttendanceIds.length === filteredHistoryList.length}
+                    />
+                    Pilih Semua
+                  </label>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleBulkApprove} 
+                      className="bg-blue-600 text-white py-1.5 px-3 rounded font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      disabled={unapprovedItems.length === 0}
+                    >
+                      Setujui Terpilih ({unapprovedItems.length})
+                    </button>
+                    <button 
+                      onClick={handleBulkDelete} 
+                      className="bg-red-600 text-white py-1.5 px-3 rounded font-semibold hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      disabled={selectedAttendanceIds.length === 0}
+                    >
+                      Hapus Terpilih ({selectedAttendanceIds.length})
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {filteredHistoryList.length === 0 ? (
               <p className="text-sm text-gray-400 italic bg-gray-50 p-4 rounded text-center">Belum ada data absen yang sesuai.</p>
@@ -891,7 +930,7 @@ export default function AbsensiApp() {
                 {filteredHistoryList.map((item, idx) => (
                   <div key={idx} className="border p-3 rounded bg-gray-50 text-sm flex justify-between items-center text-gray-800">
                     <div className="flex items-start gap-2">
-                      {role !== "atlet" && item.status_approval !== "approved" && (
+                      {role !== "atlet" && (
                         <input 
                           type="checkbox" 
                           checked={selectedAttendanceIds.includes(item.id)}
