@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { 
   ClipboardDocumentListIcon, 
-  ChartBarIcon, 
   UsersIcon, 
   MapPinIcon, 
   PrinterIcon, 
@@ -26,7 +25,7 @@ export default function AbsensiApp() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [pelatihList, setPelatihList] = useState<any[]>([]);
 
-  // State untuk Tab Navigasi Dashboard: "absen" kini menggabungkan Daftar Hadir & Rekap Total
+  // State untuk Tab Navigasi Dashboard
   const [activeTab, setActiveTab] = useState<string>("absen");
 
   // State untuk Input Login Auth
@@ -641,7 +640,7 @@ export default function AbsensiApp() {
           
           <div className="flex justify-between items-center mb-4 no-print">
             <h1 className="text-xl font-bold text-gray-800 uppercase">Dashboard {role}: {currentUser?.nama}</h1>
-            {/* Tombol Cetak / Simpan PDF HANYA Tampil di Page Gabungan Daftar Hadir / Rekap (activeTab === "absen") */}
+            {/* Tombol Cetak / Simpan PDF HANYA Tampil di Tab Daftar Hadir & Rekap */}
             {role !== "atlet" && activeTab === "absen" && (
               <button 
                 onClick={() => window.print()} 
@@ -711,14 +710,13 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* KONTEN TAB 1: DAFTAR KEHADIRAN & REKAP TOTAL DI 1 PAGE */}
+          {/* KONTEN TAB 1: DAFTAR HADIR & REKAP TOTAL DI 1 PAGE */}
           {(activeTab === "absen" || role === "atlet") && (
             <div className="flex flex-col gap-6">
               {/* Bagian Rekap Total Kehadiran */}
               <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-1.5">
-                    <ChartBarIcon className="w-4 h-4 text-indigo-600" />
                     Rekap Total Kehadiran
                   </h3>
                   {role !== "atlet" && (
@@ -859,7 +857,7 @@ export default function AbsensiApp() {
                 ) : (
                   <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-2 print-scroll-fix">
                     {filteredHistoryList.map((item, idx) => (
-                      <div key={idx} className="border p-3 rounded bg-gray-50 text-sm flex justify-between items-center text-gray-800">
+                      <div key={idx} className="border p-3 rounded bg-gray-50 text-sm flex flex-wrap justify-between items-center gap-2 text-gray-800">
                         <div className="flex items-start gap-2">
                           {role !== "atlet" && (
                             <input 
@@ -875,9 +873,9 @@ export default function AbsensiApp() {
                             <p className="text-xs text-gray-600">Lokasi: {item.location}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {item.photo && <img src={item.photo} alt="Bukti Foto" className="w-16 h-16 object-cover rounded border" />}
-                          {item.signature && <img src={item.signature} alt="TTD Digital" className="w-24 h-16 object-contain bg-white rounded border" />}
+                        <div className="flex flex-wrap items-center gap-2 mt-2 md:mt-0">
+                          {item.photo && <img src={item.photo} alt="Bukti Foto" className="w-12 h-12 md:w-16 md:h-16 object-cover rounded border" />}
+                          {item.signature && <img src={item.signature} alt="TTD Digital" className="w-20 h-12 md:w-24 md:h-16 object-contain bg-white rounded border" />}
                           
                           {role === "pelatih" && item.status_approval !== "approved" && (
                             <button onClick={() => handleApprove(item.id)} title="Approve" className="bg-green-600 text-white p-2 rounded-lg font-semibold hover:bg-green-700 no-print shadow">
@@ -1060,7 +1058,7 @@ export default function AbsensiApp() {
     );
   }
 
-  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH)
+  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH) - TTD RESPONSIF HP
   return (
     <main className="min-h-screen p-8 bg-gray-100 flex flex-col items-center">
       <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-md text-gray-800">
@@ -1088,20 +1086,22 @@ export default function AbsensiApp() {
           {photo && <img src={photo} alt="Selfie" className="w-full rounded h-48 object-cover border mb-2" />}
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 w-full">
           <label className="block text-sm font-semibold mb-1 text-gray-700">Tanda Tangan Digital</label>
-          <canvas
-            ref={sigCanvasRef}
-            width={380}
-            height={150}
-            className="border rounded bg-gray-50 cursor-crosshair touch-none mb-2"
-            onMouseDown={startDrawing}
-            onMouseUp={stopDrawing}
-            onMouseMove={draw}
-            onTouchStart={startDrawing}
-            onTouchEnd={stopDrawing}
-            onTouchMove={draw}
-          ></canvas>
+          <div className="w-full overflow-hidden border rounded bg-gray-50 mb-2">
+            <canvas
+              ref={sigCanvasRef}
+              width={380}
+              height={150}
+              className="w-full h-[150px] cursor-crosshair touch-none bg-gray-50"
+              onMouseDown={startDrawing}
+              onMouseUp={stopDrawing}
+              onMouseMove={draw}
+              onTouchStart={startDrawing}
+              onTouchEnd={stopDrawing}
+              onTouchMove={draw}
+            ></canvas>
+          </div>
           <button onClick={clearSignature} className="bg-red-500 text-white text-xs py-1 px-3 rounded font-semibold hover:bg-red-600">Ulangi TTD</button>
         </div>
 
