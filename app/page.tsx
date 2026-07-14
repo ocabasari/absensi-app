@@ -1,6 +1,16 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { 
+  ClipboardDocumentListIcon, 
+  ChartBarIcon, 
+  UsersIcon, 
+  MapPinIcon, 
+  PrinterIcon, 
+  CheckIcon, 
+  TrashIcon, 
+  PencilSquareIcon 
+} from "@heroicons/react/24/solid";
 
 export default function AbsensiApp() {
   const [role, setRole] = useState<string | null>(null);
@@ -16,7 +26,7 @@ export default function AbsensiApp() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [pelatihList, setPelatihList] = useState<any[]>([]);
 
-  // State untuk Tab Navigasi Dashboard (supaya tidak menumpuk di HP)
+  // State untuk Tab Navigasi Dashboard: "absen" kini menggabungkan Daftar Hadir & Rekap Total
   const [activeTab, setActiveTab] = useState<string>("absen");
 
   // State untuk Input Login Auth
@@ -58,7 +68,6 @@ export default function AbsensiApp() {
     fetchSettings();
     fetchUsers();
 
-    // Cek sesi aktif Supabase Auth saat refresh
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user?.email) {
         const { data: userData } = await supabase
@@ -75,7 +84,6 @@ export default function AbsensiApp() {
     });
   }, []);
 
-  // Otomatis ambil lokasi & nyalakan kamera saat masuk ke halaman form absen
   useEffect(() => {
     if (role === "atlet_form" || role === "absen_pelatih" || role === "pelatih_form") {
       getLocation();
@@ -282,7 +290,6 @@ export default function AbsensiApp() {
         }));
         setHistory(formattedHistory);
 
-        // Rekapitulasi Kehadiran dengan Pemetaan yang Bersih
         const summaryMap: { [key: string]: { total: number; role: string } } = {};
         filtered.forEach((item: any) => {
           const name = item.users?.nama || 'Pengguna';
@@ -324,7 +331,6 @@ export default function AbsensiApp() {
     }
   };
 
-  // Fungsi Approve Massal (Bulk Approve)
   const handleBulkApprove = async () => {
     if (selectedAttendanceIds.length === 0) {
       alert("Pilih minimal satu data kehadiran untuk disetujui.");
@@ -346,7 +352,6 @@ export default function AbsensiApp() {
     }
   };
 
-  // Fungsi Hapus Massal (Bulk Delete)
   const handleBulkDelete = async () => {
     if (selectedAttendanceIds.length === 0) {
       alert("Pilih minimal satu data kehadiran untuk dihapus.");
@@ -618,9 +623,6 @@ export default function AbsensiApp() {
       sum.nama.toLowerCase().includes(summarySearchQuery.toLowerCase())
     );
 
-    const selectedItems = filteredHistoryList.filter(i => selectedAttendanceIds.includes(i.id));
-    const hasUnapprovedSelected = selectedItems.some(i => i.status_approval !== 'approved');
-
     return (
       <main className="min-h-screen p-8 bg-gray-100 flex flex-col items-center">
         <style dangerouslySetInnerHTML={{__html: `
@@ -639,8 +641,15 @@ export default function AbsensiApp() {
           
           <div className="flex justify-between items-center mb-4 no-print">
             <h1 className="text-xl font-bold text-gray-800 uppercase">Dashboard {role}: {currentUser?.nama}</h1>
-            {role !== "atlet" && (
-              <button onClick={() => window.print()} className="bg-emerald-600 text-white text-sm py-2 px-4 rounded-lg font-semibold hover:bg-emerald-700 no-print">Cetak / Simpan PDF</button>
+            {/* Tombol Cetak / Simpan PDF HANYA Tampil di Page Gabungan Daftar Hadir / Rekap (activeTab === "absen") */}
+            {role !== "atlet" && activeTab === "absen" && (
+              <button 
+                onClick={() => window.print()} 
+                title="Cetak / Simpan PDF"
+                className="bg-emerald-600 text-white p-2.5 rounded-lg font-semibold hover:bg-emerald-700 no-print flex items-center justify-center shadow"
+              >
+                <PrinterIcon className="w-5 h-5" />
+              </button>
             )}
           </div>
 
@@ -659,33 +668,42 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* TAB NAVIGASI UTAMA (Mengatasi Tumpukan Panjang di HP) */}
+          {/* TAB NAVIGASI UTAMA DENGAN KOTAK AKTIF & IKON */}
           {role !== "atlet" && (
-            <div className="flex border-b mb-6 no-print overflow-x-auto">
+            <div className="flex border-b mb-6 no-print overflow-x-auto gap-2 pb-2">
               <button 
                 onClick={() => setActiveTab("absen")} 
-                className={`py-2 px-4 text-xs font-bold border-b-2 whitespace-nowrap ${activeTab === "absen" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                  activeTab === "absen" 
+                    ? "bg-blue-600 text-white shadow-md border-b-0 ring-2 ring-blue-300" 
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
+                }`}
               >
-                Daftar Hadir
-              </button>
-              <button 
-                onClick={() => setActiveTab("rekap")} 
-                className={`py-2 px-4 text-xs font-bold border-b-2 whitespace-nowrap ${activeTab === "rekap" ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
-              >
-                Rekap Total
+                <ClipboardDocumentListIcon className="w-4 h-4" />
+                Daftar Hadir & Rekap
               </button>
               {role === "admin" && (
                 <>
                   <button 
                     onClick={() => setActiveTab("users")} 
-                    className={`py-2 px-4 text-xs font-bold border-b-2 whitespace-nowrap ${activeTab === "users" ? "border-purple-600 text-purple-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                      activeTab === "users" 
+                        ? "bg-purple-600 text-white shadow-md border-b-0 ring-2 ring-purple-300" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
+                    }`}
                   >
+                    <UsersIcon className="w-4 h-4" />
                     Kelola User
                   </button>
                   <button 
                     onClick={() => setActiveTab("settings")} 
-                    className={`py-2 px-4 text-xs font-bold border-b-2 whitespace-nowrap ${activeTab === "settings" ? "border-blue-800 text-blue-800" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                    className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                      activeTab === "settings" 
+                        ? "bg-blue-800 text-white shadow-md border-b-0 ring-2 ring-blue-300" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
+                    }`}
                   >
+                    <MapPinIcon className="w-4 h-4" />
                     Pengaturan Radius
                   </button>
                 </>
@@ -693,178 +711,210 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* KONTEN TAB 1: DAFTAR KEHADIRAN & AKSI MASSAL */}
+          {/* KONTEN TAB 1: DAFTAR KEHADIRAN & REKAP TOTAL DI 1 PAGE */}
           {(activeTab === "absen" || role === "atlet") && (
-            <div className="mt-2">
-              <h2 className="text-sm font-bold text-gray-800 mb-4">Daftar Kehadiran yang Masuk</h2>
-              
-              {role !== "atlet" && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200 no-print flex flex-col gap-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-600 font-semibold">Cari Nama / Lokasi</label>
-                      <input 
-                        type="text" 
-                        value={searchQuery} 
-                        onChange={(e) => setSearchQuery(e.target.value)} 
-                        placeholder="Ketik nama atlet/pelatih..." 
-                        className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" 
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-600 font-semibold">Filter Peran</label>
-                      <select 
-                        value={roleFilter} 
-                        onChange={(e) => setRoleFilter(e.target.value)} 
-                        className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
-                      >
-                        <option value="all">Semua Peran</option>
-                        <option value="atlet">Atlet</option>
-                        <option value="pelatih">Pelatih</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 mt-1">
-                    <div>
-                      <label className="text-xs text-gray-600 font-semibold">Dari Tanggal</label>
-                      <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-600 font-semibold">Sampai Tanggal</label>
-                      <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" />
-                    </div>
-                  </div>
-                  {(startDate || endDate || searchQuery || roleFilter !== "all") && (
-                    <button 
-                      onClick={() => { setStartDate(""); setEndDate(""); setSearchQuery(""); setRoleFilter("all"); }} 
-                      className="bg-gray-500 text-white text-xs py-1 px-3 rounded font-semibold self-start mt-1"
+            <div className="flex flex-col gap-6">
+              {/* Bagian Rekap Total Kehadiran */}
+              <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-1.5">
+                    <ChartBarIcon className="w-4 h-4 text-indigo-600" />
+                    Rekap Total Kehadiran
+                  </h3>
+                  {role !== "atlet" && (
+                    <select 
+                      value={summaryRoleFilter} 
+                      onChange={(e) => setSummaryRoleFilter(e.target.value)} 
+                      className="border p-1 rounded bg-white text-gray-800 text-xs no-print"
                     >
-                      Reset Filter & Pencarian
-                    </button>
+                      <option value="all">Semua Peran</option>
+                      <option value="atlet">Atlet</option>
+                      <option value="pelatih">Pelatih</option>
+                    </select>
                   )}
                 </div>
-              )}
 
-              {/* Tombol Aksi Massal Dinamis */}
-              {role !== "atlet" && filteredHistoryList.length > 0 && (() => {
-                const selectedItems = filteredHistoryList.filter(i => selectedAttendanceIds.includes(i.id));
-                const unapprovedItems = selectedItems.filter(i => i.status_approval !== 'approved');
-                
-                return (
-                  <div className="mb-3 p-2 bg-blue-50 border border-blue-100 rounded flex justify-between items-center no-print text-xs">
-                    <label className="flex items-center gap-2 cursor-pointer font-semibold text-blue-900">
-                      <input 
-                        type="checkbox" 
-                        onChange={() => toggleSelectAll(filteredHistoryList)}
-                        checked={selectedAttendanceIds.length > 0 && selectedAttendanceIds.length === filteredHistoryList.length}
-                      />
-                      Pilih Semua
-                    </label>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={handleBulkApprove} 
-                        className="bg-blue-600 text-white py-1.5 px-3 rounded font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                        disabled={unapprovedItems.length === 0}
-                      >
-                        Setujui Terpilih ({unapprovedItems.length})
-                      </button>
-                      <button 
-                        onClick={handleBulkDelete} 
-                        className="bg-red-600 text-white py-1.5 px-3 rounded font-semibold hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                        disabled={selectedAttendanceIds.length === 0}
-                      >
-                        Hapus Terpilih ({selectedAttendanceIds.length})
-                      </button>
-                    </div>
+                {role !== "atlet" && (
+                  <div className="mb-2 no-print">
+                    <input 
+                      type="text" 
+                      value={summarySearchQuery} 
+                      onChange={(e) => setSummarySearchQuery(e.target.value)} 
+                      placeholder="Cari nama pada rekap..." 
+                      className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" 
+                    />
                   </div>
-                );
-              })()}
+                )}
 
-              {filteredHistoryList.length === 0 ? (
-                <p className="text-sm text-gray-400 italic bg-gray-50 p-4 rounded text-center">Belum ada data absen yang sesuai.</p>
-              ) : (
-                <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-2 print-scroll-fix">
-                  {filteredHistoryList.map((item, idx) => (
-                    <div key={idx} className="border p-3 rounded bg-gray-50 text-sm flex justify-between items-center text-gray-800">
-                      <div className="flex items-start gap-2">
-                        {role !== "atlet" && (
-                          <input 
-                            type="checkbox" 
-                            checked={selectedAttendanceIds.includes(item.id)}
-                            onChange={() => toggleSelectId(item.id)}
-                            className="mt-1 no-print"
-                          />
-                        )}
+                {filteredSummaryList.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Belum ada data kehadiran pada filter ini.</p>
+                ) : (
+                  <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                    {filteredSummaryList.map((sum, index) => (
+                      <div key={index} className="flex justify-between items-center bg-white p-2 rounded border text-xs">
                         <div>
-                          <p className="font-bold text-gray-800 uppercase">{item.nama} - <span className="text-blue-600">{item.role}</span></p>
-                          <p className="text-xs text-gray-500">{item.tanggal} - {item.waktu}</p>
-                          <p className="text-xs text-gray-600">Lokasi: {item.location}</p>
+                          <span className="font-bold text-gray-800">{sum.nama}</span>
+                          <span className="text-[10px] text-gray-500 uppercase ml-2">({sum.role})</span>
+                        </div>
+                        <span className="bg-indigo-600 text-white px-2.5 py-0.5 rounded-full font-semibold">Hadir: {sum.totalHadir}x</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bagian Daftar Kehadiran yang Masuk */}
+              <div>
+                <h2 className="text-sm font-bold text-gray-800 mb-4">Daftar Kehadiran yang Masuk</h2>
+                
+                {role !== "atlet" && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200 no-print flex flex-col gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-gray-600 font-semibold">Cari Nama / Lokasi</label>
+                        <input 
+                          type="text" 
+                          value={searchQuery} 
+                          onChange={(e) => setSearchQuery(e.target.value)} 
+                          placeholder="Ketik nama atlet/pelatih..." 
+                          className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 font-semibold">Filter Peran</label>
+                        <select 
+                          value={roleFilter} 
+                          onChange={(e) => setRoleFilter(e.target.value)} 
+                          className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
+                        >
+                          <option value="all">Semua Peran</option>
+                          <option value="atlet">Atlet</option>
+                          <option value="pelatih">Pelatih</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <div>
+                        <label className="text-xs text-gray-600 font-semibold">Dari Tanggal</label>
+                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600 font-semibold">Sampai Tanggal</label>
+                        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" />
+                      </div>
+                    </div>
+                    {(startDate || endDate || searchQuery || roleFilter !== "all") && (
+                      <button 
+                        onClick={() => { setStartDate(""); setEndDate(""); setSearchQuery(""); setRoleFilter("all"); }} 
+                        className="bg-gray-500 text-white text-xs py-1 px-3 rounded font-semibold self-start mt-1"
+                      >
+                        Reset Filter & Pencarian
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Tombol Aksi Massal Dinamis (Menggunakan Ikon) */}
+                {role !== "atlet" && filteredHistoryList.length > 0 && (() => {
+                  const selectedItems = filteredHistoryList.filter(i => selectedAttendanceIds.includes(i.id));
+                  const unapprovedItems = selectedItems.filter(i => i.status_approval !== 'approved');
+                  
+                  return (
+                    <div className="mb-3 p-2 bg-blue-50 border border-blue-100 rounded flex justify-between items-center no-print text-xs">
+                      <label className="flex items-center gap-2 cursor-pointer font-semibold text-blue-900">
+                        <input 
+                          type="checkbox" 
+                          onChange={() => toggleSelectAll(filteredHistoryList)}
+                          checked={selectedAttendanceIds.length > 0 && selectedAttendanceIds.length === filteredHistoryList.length}
+                        />
+                        Pilih Semua
+                      </label>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={handleBulkApprove} 
+                          title="Setujui Terpilih"
+                          className="bg-blue-600 text-white p-2 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 shadow"
+                          disabled={unapprovedItems.length === 0}
+                        >
+                          <CheckIcon className="w-4 h-4" />
+                          <span>({unapprovedItems.length})</span>
+                        </button>
+                        <button 
+                          onClick={handleBulkDelete} 
+                          title="Hapus Terpilih"
+                          className="bg-red-600 text-white p-2 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 shadow"
+                          disabled={selectedAttendanceIds.length === 0}
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                          <span>({selectedAttendanceIds.length})</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {filteredHistoryList.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic bg-gray-50 p-4 rounded text-center">Belum ada data absen yang sesuai.</p>
+                ) : (
+                  <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-2 print-scroll-fix">
+                    {filteredHistoryList.map((item, idx) => (
+                      <div key={idx} className="border p-3 rounded bg-gray-50 text-sm flex justify-between items-center text-gray-800">
+                        <div className="flex items-start gap-2">
+                          {role !== "atlet" && (
+                            <input 
+                              type="checkbox" 
+                              checked={selectedAttendanceIds.includes(item.id)}
+                              onChange={() => toggleSelectId(item.id)}
+                              className="mt-1 no-print"
+                            />
+                          )}
+                          <div>
+                            <p className="font-bold text-gray-800 uppercase">{item.nama} - <span className="text-blue-600">{item.role}</span></p>
+                            <p className="text-xs text-gray-500">{item.tanggal} - {item.waktu}</p>
+                            <p className="text-xs text-gray-600">Lokasi: {item.location}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {item.photo && <img src={item.photo} alt="Bukti Foto" className="w-16 h-16 object-cover rounded border" />}
+                          {item.signature && <img src={item.signature} alt="TTD Digital" className="w-24 h-16 object-contain bg-white rounded border" />}
+                          
+                          {role === "pelatih" && item.status_approval !== "approved" && (
+                            <button onClick={() => handleApprove(item.id)} title="Approve" className="bg-green-600 text-white p-2 rounded-lg font-semibold hover:bg-green-700 no-print shadow">
+                              <CheckIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                          {role === "admin" && (
+                            <button onClick={() => handleDeleteAttendance(item.id)} title="Hapus" className="bg-red-600 text-white p-2 rounded-lg font-semibold hover:bg-red-700 no-print shadow">
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {item.photo && <img src={item.photo} alt="Bukti Foto" className="w-16 h-16 object-cover rounded border" />}
-                        {item.signature && <img src={item.signature} alt="TTD Digital" className="w-24 h-16 object-contain bg-white rounded border" />}
-                        
-                        {role === "pelatih" && item.status_approval !== "approved" && (
-                          <button onClick={() => handleApprove(item.id)} className="bg-green-600 text-white text-xs py-1.5 px-3 rounded font-semibold hover:bg-green-700 no-print">Approve</button>
-                        )}
-                        {role === "admin" && (
-                          <button onClick={() => handleDeleteAttendance(item.id)} className="bg-red-600 text-white text-xs py-1.5 px-3 rounded font-semibold hover:bg-red-700 no-print">Hapus</button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Keterangan Mengetahui Pelatih/Pembimbing HANYA di Page Ini saat Cetak/Print */}
+              {role !== "atlet" && (
+                <div className="mt-12 pt-8 border-t flex justify-end">
+                  <div className="text-center w-64">
+                    <p className="text-xs text-gray-600 mb-1">
+                      Karawang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    <p className="text-sm font-bold text-gray-800">Mengetahui,</p>
+                    <p className="text-xs text-gray-500 mb-16">Pelatih / Pembimbing</p>
+                    <p className="font-bold text-sm text-gray-800 border-b border-gray-400 pb-1 inline-block min-w-[180px]">
+                      {role === 'pelatih' ? currentUser?.nama : '( _________________________ )'}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* KONTEN TAB 2: REKAP TOTAL KEHADIRAN */}
-          {activeTab === "rekap" && role !== "atlet" && (
-            <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-bold text-indigo-900">Rekap Total Kehadiran</h3>
-                <select 
-                  value={summaryRoleFilter} 
-                  onChange={(e) => setSummaryRoleFilter(e.target.value)} 
-                  className="border p-1 rounded bg-white text-gray-800 text-xs no-print"
-                >
-                  <option value="all">Semua Peran</option>
-                  <option value="atlet">Atlet</option>
-                  <option value="pelatih">Pelatih</option>
-                </select>
-              </div>
-
-              <div className="mb-2 no-print">
-                <input 
-                  type="text" 
-                  value={summarySearchQuery} 
-                  onChange={(e) => setSummarySearchQuery(e.target.value)} 
-                  placeholder="Cari nama pada rekap..." 
-                  className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full" 
-                />
-              </div>
-
-              {filteredSummaryList.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Belum ada data kehadiran pada filter ini.</p>
-              ) : (
-                <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
-                  {filteredSummaryList.map((sum, index) => (
-                    <div key={index} className="flex justify-between items-center bg-white p-2 rounded border text-xs">
-                      <div>
-                        <span className="font-bold text-gray-800">{sum.nama}</span>
-                        <span className="text-[10px] text-gray-500 uppercase ml-2">({sum.role})</span>
-                      </div>
-                      <span className="bg-indigo-600 text-white px-2.5 py-0.5 rounded-full font-semibold">Hadir: {sum.totalHadir}x</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* KONTEN TAB 3: KELOLA PENGGUNA & MANAJEMEN PENUGASAN */}
+          {/* KONTEN TAB 2: KELOLA PENGGUNA (Menggunakan Ikon Edit & Hapus) */}
           {activeTab === "users" && role === "admin" && (
             <div className="flex flex-col gap-4">
               <form onSubmit={handleCreateOrUpdateUser} className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-gray-800">
@@ -965,8 +1015,12 @@ export default function AbsensiApp() {
                             {u.role === 'atlet' && <span className="text-gray-500 ml-2">Pelatih: {coachObj?.nama || 'Mandiri'}</span>}
                           </div>
                           <div className="flex gap-1">
-                            <button onClick={() => setEditingUser(u)} className="bg-amber-500 text-white px-2 py-1 rounded font-semibold">Edit</button>
-                            <button onClick={() => handleDeleteUser(u.id)} className="bg-red-500 text-white px-2 py-1 rounded font-semibold">Hapus</button>
+                            <button onClick={() => setEditingUser(u)} title="Edit" className="bg-amber-500 text-white p-1.5 rounded font-semibold shadow">
+                              <PencilSquareIcon className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDeleteUser(u.id)} title="Hapus" className="bg-red-500 text-white p-1.5 rounded font-semibold shadow">
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       );
@@ -977,7 +1031,7 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* KONTEN TAB 4: PENGATURAN TITIK PUSAT & RADIUS */}
+          {/* KONTEN TAB 3: PENGATURAN RADIUS */}
           {activeTab === "settings" && role === "admin" && (
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 text-gray-800">
               <form onSubmit={handleUpdateSettings}>
@@ -998,22 +1052,6 @@ export default function AbsensiApp() {
                 </div>
                 <button type="submit" className="bg-blue-600 text-white text-xs py-1.5 px-3 rounded font-semibold hover:bg-blue-700">Simpan Pengaturan Radius</button>
               </form>
-            </div>
-          )}
-
-          {/* Area Tanda Tangan Mengetahui / Pelatih - Tampil saat Cetak/Print */}
-          {role !== "atlet" && (
-            <div className="mt-12 pt-8 border-t flex justify-end">
-              <div className="text-center w-64">
-                <p className="text-xs text-gray-600 mb-1">
-                  Karawang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </p>
-                <p className="text-sm font-bold text-gray-800">Mengetahui,</p>
-                <p className="text-xs text-gray-500 mb-16">Pelatih / Pembimbing</p>
-                <p className="font-bold text-sm text-gray-800 border-b border-gray-400 pb-1 inline-block min-w-[180px]">
-                  {role === 'pelatih' ? currentUser?.nama : '( _________________________ )'}
-                </p>
-              </div>
             </div>
           )}
 
