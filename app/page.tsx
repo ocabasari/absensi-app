@@ -25,33 +25,24 @@ export default function AbsensiApp() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [pelatihList, setPelatihList] = useState<any[]>([]);
 
-  // State untuk Tab Navigasi Dashboard
   const [activeTab, setActiveTab] = useState<string>("absen");
 
-  // State untuk Input Login Auth
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
-  // State untuk Filter Rentang Tanggal
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  // State Filter & Search untuk Daftar Hadir
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
-  // State Filter & Search untuk Daftar Pengguna (Admin)
   const [userSearchQuery, setUserSearchQuery] = useState<string>("");
   const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
 
-  // State Filter & Search untuk Rekap Total Kehadiran
   const [summaryRoleFilter, setSummaryRoleFilter] = useState<string>("all");
   const [summarySearchQuery, setSummarySearchQuery] = useState<string>("");
 
-  // State untuk Selected ID Approval/Delete Massal (Checkbox)
   const [selectedAttendanceIds, setSelectedAttendanceIds] = useState<number[]>([]);
-
-  // State untuk Edit User
   const [editingUser, setEditingUser] = useState<any>(null);
 
   const [adminLat, setAdminLat] = useState<number>(-6.31505);
@@ -623,7 +614,7 @@ export default function AbsensiApp() {
     );
 
     return (
-      <main className="min-h-screen p-8 bg-gray-100 flex flex-col items-center">
+      <main className="min-h-screen p-4 md:p-8 bg-gray-100 flex flex-col items-center">
         <style dangerouslySetInnerHTML={{__html: `
           @media print {
             .print-scroll-fix {
@@ -635,18 +626,21 @@ export default function AbsensiApp() {
             }
           }
         `}} />
-        <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-3xl text-gray-800">
+        <div className="bg-white p-4 md:p-6 rounded-xl shadow-md w-full max-w-3xl text-gray-800">
+          
           {/* Header Dashboard: Info User di Kiri, Tombol Keluar di Kanan */}
-          <div className="flex justify-between items-center mb-6 pb-3 border-b no-print">
+          <div className="flex justify-between items-center mb-4 pb-3 border-b no-print">
             <div>
-              <h1 className="text-lg font-bold text-gray-800 uppercase">Dashboard {role}</h1>
+              <h1 className="text-base md:text-lg font-bold text-gray-800 uppercase">Dashboard {role}</h1>
               <p className="text-xs text-gray-500 font-medium">{currentUser?.nama}</p>
             </div>
             <button 
               onClick={async () => { 
-                await supabase.auth.signOut(); 
-                setRole(null); 
-                setCurrentUser(null); 
+                if (confirm("Apakah Anda yakin ingin keluar?")) {
+                  await supabase.auth.signOut(); 
+                  setRole(null); 
+                  setCurrentUser(null); 
+                }
               }} 
               className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg shadow transition-all flex items-center gap-1"
             >
@@ -654,13 +648,13 @@ export default function AbsensiApp() {
             </button>
           </div>
           
-          <div className="flex justify-between items-center mb-4 no-print">
-            <h2 className="text-sm font-semibold text-gray-600 uppercase">Panel Utama</h2>
+          <div className="flex justify-between items-center mb-3 no-print">
+            <h2 className="text-xs md:text-sm font-semibold text-gray-600 uppercase">Panel Utama</h2>
             {role !== "atlet" && activeTab === "absen" && (
               <button 
                 onClick={() => window.print()} 
                 title="Cetak / Simpan PDF"
-                className="bg-emerald-600 text-white p-2.5 rounded-lg font-semibold hover:bg-emerald-700 no-print flex items-center justify-center shadow"
+                className="bg-emerald-600 text-white p-2 rounded-lg font-semibold hover:bg-emerald-700 no-print flex items-center justify-center shadow"
               >
                 <PrinterIcon className="w-5 h-5" />
               </button>
@@ -668,57 +662,57 @@ export default function AbsensiApp() {
           </div>
 
           {(role === "pelatih" || role === "atlet") && (
-            <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-100 no-print flex justify-between items-center">
+            <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-100 no-print flex justify-between items-center">
               <div>
-                <h2 className="text-sm font-bold text-green-800">Absensi Kehadiran Latihan</h2>
-                <p className="text-xs text-green-600">Lakukan absensi latihan hari ini.</p>
+                <h2 className="text-xs md:text-sm font-bold text-green-800">Absensi Kehadiran Latihan</h2>
+                <p className="text-[11px] text-green-600">Lakukan absensi latihan hari ini.</p>
               </div>
               <button 
                 onClick={() => setRole(role === "pelatih" ? "absen_pelatih" : "atlet_form")} 
-                className="bg-green-600 text-white text-xs py-2 px-4 rounded font-semibold hover:bg-green-700"
+                className="bg-green-600 text-white text-xs py-1.5 px-3 rounded font-semibold hover:bg-green-700 whitespace-nowrap"
               >
                 Buka Form Absen
               </button>
             </div>
           )}
 
-          {/* TAB NAVIGASI UTAMA DENGAN KOTAK AKTIF & IKON */}
+          {/* TAB NAVIGASI UTAMA: RESPONSIF GRID DI HP */}
           {role !== "atlet" && (
-            <div className="flex border-b mb-6 no-print overflow-x-auto gap-2 pb-2">
+            <div className="grid grid-cols-3 gap-2 mb-6 no-print">
               <button 
                 onClick={() => setActiveTab("absen")} 
-                className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                className={`py-2.5 px-2 text-[11px] md:text-xs font-bold rounded-lg flex flex-col md:flex-row items-center justify-center gap-1 transition-all text-center ${
                   activeTab === "absen" 
-                    ? "bg-blue-600 text-white shadow-md border-b-0 ring-2 ring-blue-300" 
+                    ? "bg-blue-600 text-white shadow-md ring-2 ring-blue-300" 
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
                 }`}
               >
                 <ClipboardDocumentListIcon className="w-4 h-4" />
-                Daftar Hadir & Rekap
+                <span>Daftar Hadir & Rekap</span>
               </button>
               {role === "admin" && (
                 <>
                   <button 
                     onClick={() => setActiveTab("users")} 
-                    className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                    className={`py-2.5 px-2 text-[11px] md:text-xs font-bold rounded-lg flex flex-col md:flex-row items-center justify-center gap-1 transition-all text-center ${
                       activeTab === "users" 
-                        ? "bg-purple-600 text-white shadow-md border-b-0 ring-2 ring-purple-300" 
+                        ? "bg-purple-600 text-white shadow-md ring-2 ring-purple-300" 
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
                     }`}
                   >
                     <UsersIcon className="w-4 h-4" />
-                    Kelola User
+                    <span>Kelola User</span>
                   </button>
                   <button 
                     onClick={() => setActiveTab("settings")} 
-                    className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all ${
+                    className={`py-2.5 px-2 text-[11px] md:text-xs font-bold rounded-lg flex flex-col md:flex-row items-center justify-center gap-1 transition-all text-center ${
                       activeTab === "settings" 
-                        ? "bg-blue-800 text-white shadow-md border-b-0 ring-2 ring-blue-300" 
+                        ? "bg-blue-800 text-white shadow-md ring-2 ring-blue-300" 
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200"
                     }`}
                   >
                     <MapPinIcon className="w-4 h-4" />
-                    Pengaturan Radius
+                    <span>Pengaturan Radius</span>
                   </button>
                 </>
               )}
@@ -731,7 +725,7 @@ export default function AbsensiApp() {
               {/* Bagian Rekap Total Kehadiran */}
               <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-indigo-900">
                     Rekap Total Kehadiran
                   </h3>
                   {role !== "atlet" && (
@@ -909,9 +903,9 @@ export default function AbsensiApp() {
                 )}
               </div>
 
-              {/* Keterangan Mengetahui Pelatih/Pembimbing HANYA di Page Ini saat Cetak/Print */}
+              {/* Tanda Tangan Mengetahui Pelatih/Pembimbing: HIDDEN di layar HP/Desktop, HANYA MUNCUL SAAT PRINT/PDF */}
               {role !== "atlet" && (
-                <div className="mt-12 pt-8 border-t flex justify-end">
+                <div className="mt-12 pt-8 border-t hidden print:flex justify-end">
                   <div className="text-center w-64">
                     <p className="text-xs text-gray-600 mb-1">
                       Karawang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -927,7 +921,7 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* KONTEN TAB 2: KELOLA PENGGUNA (Menggunakan Ikon Edit & Hapus) */}
+          {/* KONTEN TAB 2: KELOLA PENGGUNA */}
           {activeTab === "users" && role === "admin" && (
             <div className="flex flex-col gap-4">
               <form onSubmit={handleCreateOrUpdateUser} className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-gray-800">
@@ -950,27 +944,27 @@ export default function AbsensiApp() {
                   <div>
                     <label className="text-xs text-gray-600 font-semibold">Role</label>
                     <select 
-  name="role" 
-  defaultValue={editingUser?.role || "atlet"} 
-  className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
->
-  <option value="atlet">Atlet</option>
-  <option value="pelatih">Pelatih</option>
-  <option value="admin">Admin</option>
-</select>
+                      name="role" 
+                      defaultValue={editingUser?.role || "atlet"} 
+                      className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
+                    >
+                      <option value="atlet">Atlet</option>
+                      <option value="pelatih">Pelatih</option>
+                      <option value="admin">Admin</option>
+                    </select>
                   </div>
                   <div className="col-span-2">
                     <label className="text-xs text-gray-600 font-semibold">Pelatih Pembimbing</label>
                     <select 
-  name="coach_id" 
-  defaultValue={editingUser?.coach_id || ""} 
-  className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
->
-  <option value="">-- Tanpa Pelatih / Mandiri --</option>
-  {pelatihList.map((p) => (
-    <option key={p.id} value={p.id}>{p.nama}</option>
-  ))}
-</select>
+                      name="coach_id" 
+                      defaultValue={editingUser?.coach_id || ""} 
+                      className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
+                    >
+                      <option value="">-- Tanpa Pelatih / Mandiri --</option>
+                      {pelatihList.map((p) => (
+                        <option key={p.id} value={p.id}>{p.nama}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-2">
@@ -1071,7 +1065,7 @@ export default function AbsensiApp() {
     );
   }
 
-  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH) - TTD RESPONSIF HP
+  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH)
   return (
     <main className="min-h-screen p-8 bg-gray-100 flex flex-col items-center">
       <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-md text-gray-800">
