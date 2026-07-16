@@ -10,7 +10,10 @@ import {
   TrashIcon, 
   PencilSquareIcon,
   CameraIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  ArrowRightOnRectangleIcon,
+  ArrowLeftIcon,
+  PlusCircleIcon
 } from "@heroicons/react/24/solid";
 
 export default function AbsensiApp() {
@@ -29,18 +32,20 @@ export default function AbsensiApp() {
 
   const [activeTab, setActiveTab] = useState<string>("absen");
 
-  // State untuk Modal Kustom Konfirmasi Seragam
+  // State untuk Modal Kustom Konfirmasi & Notifikasi Sukses
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
     message: string;
-    type: 'danger' | 'success' | 'warning';
+    type: 'danger' | 'success' | 'warning' | 'info';
+    showCancel?: boolean;
     onConfirm: () => void;
   }>({
     isOpen: false,
     title: '',
     message: '',
     type: 'warning',
+    showCancel: true,
     onConfirm: () => {},
   });
 
@@ -98,6 +103,19 @@ export default function AbsensiApp() {
     }
   }, [role, adminLat, adminLng]);
 
+  const showSuccessAlert = (title: string, message: string, onOk?: () => void) => {
+    setModalConfig({
+      isOpen: true,
+      title,
+      message,
+      type: 'success',
+      showCancel: false,
+      onConfirm: () => {
+        if (onOk) onOk();
+      }
+    });
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -116,7 +134,14 @@ export default function AbsensiApp() {
           .single();
 
         if (userError || !userData) {
-          alert("Profil pengguna tidak ditemukan di database!");
+          setModalConfig({
+            isOpen: true,
+            title: "Gagal Masuk",
+            message: "Profil pengguna tidak ditemukan di database!",
+            type: 'danger',
+            showCancel: false,
+            onConfirm: () => {}
+          });
           return;
         }
 
@@ -124,7 +149,14 @@ export default function AbsensiApp() {
         setRole(userData.role);
       }
     } catch (error: any) {
-      alert("Gagal masuk: " + error.message);
+      setModalConfig({
+        isOpen: true,
+        title: "Gagal Masuk",
+        message: error.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => {}
+      });
     }
   };
 
@@ -168,8 +200,11 @@ export default function AbsensiApp() {
         };
         const { error } = await supabase.from('users').update(payload).eq('id', editingUser.id);
         if (error) throw error;
-        alert("Data user berhasil diperbarui!");
+        
+        form.reset();
         setEditingUser(null);
+        fetchUsers();
+        showSuccessAlert("Berhasil", "Data user berhasil diperbarui!");
       } else {
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
@@ -186,13 +221,20 @@ export default function AbsensiApp() {
         const { error: dbError } = await supabase.from('users').insert([payload]);
         if (dbError) throw dbError;
 
-        alert("User baru berhasil didaftarkan dan terhubung ke Auth!");
+        form.reset();
+        setEditingUser(null);
+        fetchUsers();
+        showSuccessAlert("Berhasil", "User baru berhasil didaftarkan dan terhubung ke Auth!");
       }
-      form.reset();
-      setEditingUser(null);
-      fetchUsers();
     } catch (error: any) {
-      alert("Gagal memproses user: " + error.message);
+      setModalConfig({
+        isOpen: true,
+        title: "Gagal",
+        message: error.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => {}
+      });
     }
   };
 
@@ -204,6 +246,7 @@ export default function AbsensiApp() {
       title: editingUser ? "Konfirmasi Update User" : "Konfirmasi Simpan User",
       message: "Apakah Anda yakin ingin menyimpan perubahan data pengguna ini?",
       type: 'warning',
+      showCancel: true,
       onConfirm: () => {
         executeCreateOrUpdateUser({ preventDefault: () => {} , currentTarget: formTarget } as any);
       }
@@ -216,13 +259,14 @@ export default function AbsensiApp() {
       title: "Hapus Pengguna",
       message: "Yakin ingin menghapus pengguna ini dari sistem?",
       type: 'danger',
+      showCancel: true,
       onConfirm: async () => {
         const { error } = await supabase.from('users').delete().eq('id', id);
         if (error) {
           alert("Gagal menghapus: " + error.message);
         } else {
-          alert("User berhasil dihapus.");
           fetchUsers();
+          showSuccessAlert("Berhasil", "User berhasil dihapus.");
         }
       }
     });
@@ -234,13 +278,14 @@ export default function AbsensiApp() {
       title: "Hapus Absensi",
       message: "Yakin ingin menghapus data absensi ini?",
       type: 'danger',
+      showCancel: true,
       onConfirm: async () => {
         const { error } = await supabase.from('attendances').delete().eq('id', id);
         if (error) {
           alert("Gagal menghapus absen: " + error.message);
         } else {
-          alert("Data absensi berhasil dihapus.");
           fetchAttendances();
+          showSuccessAlert("Berhasil", "Data absensi berhasil dihapus.");
         }
       }
     });
@@ -258,12 +303,19 @@ export default function AbsensiApp() {
     ]);
 
     if (error) {
-      alert("Gagal menyimpan pengaturan: " + error.message);
+      setModalConfig({
+        isOpen: true,
+        title: "Gagal",
+        message: "Gagal menyimpan pengaturan: " + error.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => {}
+      });
     } else {
       setAdminLat(lat);
       setAdminLng(lng);
       setMaxRadiusMeters(radius);
-      alert("Pengaturan radius berhasil diperbarui!");
+      showSuccessAlert("Berhasil", "Pengaturan radius berhasil diperbarui!");
     }
   };
 
@@ -360,13 +412,14 @@ export default function AbsensiApp() {
       title: "Setujui Kehadiran",
       message: "Setujui data absensi latihan ini?",
       type: 'success',
+      showCancel: true,
       onConfirm: async () => {
         const { error } = await supabase.from('attendances').update({ status_approval: 'approved' }).eq('id', id);
         if (error) {
           alert("Gagal approve: " + error.message);
         } else {
-          alert("Absen berhasil disetujui!");
           fetchAttendances();
+          showSuccessAlert("Berhasil", "Absen berhasil disetujui!");
         }
       }
     });
@@ -382,6 +435,7 @@ export default function AbsensiApp() {
       title: "Persetujuan Massal",
       message: `Setujui ${selectedAttendanceIds.length} data absensi yang dipilih?`,
       type: 'success',
+      showCancel: true,
       onConfirm: async () => {
         const { error } = await supabase
           .from('attendances')
@@ -391,9 +445,9 @@ export default function AbsensiApp() {
         if (error) {
           alert("Gagal approve massal: " + error.message);
         } else {
-          alert("Absen terpilih berhasil disetujui secara massal!");
           setSelectedAttendanceIds([]);
           fetchAttendances();
+          showSuccessAlert("Berhasil", "Absen terpilih berhasil disetujui secara massal!");
         }
       }
     });
@@ -409,6 +463,7 @@ export default function AbsensiApp() {
       title: "Hapus Massal",
       message: `Yakin ingin menghapus ${selectedAttendanceIds.length} data absensi yang dipilih?`,
       type: 'danger',
+      showCancel: true,
       onConfirm: async () => {
         const { error } = await supabase
           .from('attendances')
@@ -418,9 +473,9 @@ export default function AbsensiApp() {
         if (error) {
           alert("Gagal menghapus massal: " + error.message);
         } else {
-          alert("Data absensi terpilih berhasil dihapus secara massal!");
           setSelectedAttendanceIds([]);
           fetchAttendances();
+          showSuccessAlert("Berhasil", "Data absensi terpilih berhasil dihapus secara massal!");
         }
       }
     });
@@ -620,11 +675,19 @@ export default function AbsensiApp() {
 
       if (dbError) throw dbError;
 
-      alert(`Absen ${currentUser.nama} berhasil dikirim!`);
-      fetchAttendances();
-      setRole(currentUser.role);
+      showSuccessAlert("Absen Berhasil", `Absen ${currentUser.nama} berhasil dikirim!`, () => {
+        fetchAttendances();
+        setRole(currentUser.role);
+      });
     } catch (error: any) {
-      alert("Gagal mengirim absen: " + error.message);
+      setModalConfig({
+        isOpen: true,
+        title: "Gagal Mengirim Absen",
+        message: error.message,
+        type: 'danger',
+        showCancel: false,
+        onConfirm: () => {}
+      });
     }
   };
 
@@ -634,6 +697,7 @@ export default function AbsensiApp() {
       title: "Konfirmasi Kirim Absen",
       message: "Pastikan foto selfie dan tanda tangan Anda sudah benar. Kirim absensi sekarang?",
       type: 'success',
+      showCancel: true,
       onConfirm: executeKirimAbsen
     });
   };
@@ -673,6 +737,46 @@ export default function AbsensiApp() {
             </button>
           </form>
         </div>
+
+        {/* MODAL GLOBAL */}
+        {modalConfig.isOpen && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center transform transition-all animate-in fade-in zoom-in-95">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                modalConfig.type === 'danger' ? 'bg-red-100 text-red-500' :
+                modalConfig.type === 'success' ? 'bg-green-100 text-green-500' : 'bg-amber-100 text-amber-500'
+              }`}>
+                {modalConfig.type === 'danger' ? <TrashIcon className="w-6 h-6" /> :
+                 modalConfig.type === 'success' ? <CheckIcon className="w-6 h-6" /> : <PencilSquareIcon className="w-6 h-6" />}
+              </div>
+              <h3 className="text-base font-bold text-gray-800 mb-1">{modalConfig.title}</h3>
+              <p className="text-xs text-gray-500 mb-6">{modalConfig.message}</p>
+              <div className="flex gap-2">
+                {modalConfig.showCancel && (
+                  <button 
+                    onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-xl transition"
+                  >
+                    Batal
+                  </button>
+                )}
+                <button 
+                  onClick={() => {
+                    const action = modalConfig.onConfirm;
+                    setModalConfig({ ...modalConfig, isOpen: false });
+                    action();
+                  }}
+                  className={`flex-1 text-white text-xs font-semibold py-2.5 rounded-xl transition shadow-md ${
+                    modalConfig.type === 'danger' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' :
+                    modalConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                  }`}
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -714,15 +818,16 @@ export default function AbsensiApp() {
                 title: "Konfirmasi Keluar",
                 message: "Apakah Anda yakin ingin keluar dari sesi ini?",
                 type: 'danger',
+                showCancel: true,
                 onConfirm: async () => {
                   await supabase.auth.signOut(); 
                   setRole(null); 
                   setCurrentUser(null);
                 }
               })} 
-              className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg shadow transition-all flex items-center gap-1"
+              className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg shadow transition-all flex items-center gap-1.5"
             >
-              Keluar
+              <ArrowRightOnRectangleIcon className="w-4 h-4" /> Keluar
             </button>
           </div>
           
@@ -747,9 +852,9 @@ export default function AbsensiApp() {
               </div>
               <button 
                 onClick={() => setRole(role === "pelatih" ? "absen_pelatih" : "atlet_form")} 
-                className="bg-green-600 text-white text-xs py-1.5 px-3 rounded font-semibold hover:bg-green-700 whitespace-nowrap"
+                className="bg-green-600 text-white text-xs py-1.5 px-3 rounded-lg font-semibold hover:bg-green-700 whitespace-nowrap flex items-center gap-1.5 shadow"
               >
-                Buka Form Absen
+                <PlusCircleIcon className="w-4 h-4" /> Buka Form Absen
               </button>
             </div>
           )}
@@ -1117,6 +1222,7 @@ export default function AbsensiApp() {
                   title: "Simpan Pengaturan",
                   message: "Simpan perubahan radius dan titik koordinat pusat absen?",
                   type: 'warning',
+                  showCancel: true,
                   onConfirm: () => handleUpdateSettings({ preventDefault: () => {}, currentTarget: formTarget } as any)
                 });
               }}>
@@ -1142,7 +1248,7 @@ export default function AbsensiApp() {
 
         </div>
 
-        {/* MODAL KONFIRMASI KUSTOM SERAGAM */}
+        {/* MODAL GLOBAL */}
         {modalConfig.isOpen && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center transform transition-all animate-in fade-in zoom-in-95">
@@ -1156,12 +1262,14 @@ export default function AbsensiApp() {
               <h3 className="text-base font-bold text-gray-800 mb-1">{modalConfig.title}</h3>
               <p className="text-xs text-gray-500 mb-6">{modalConfig.message}</p>
               <div className="flex gap-2">
-                <button 
-                  onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-xl transition"
-                >
-                  Batal
-                </button>
+                {modalConfig.showCancel && (
+                  <button 
+                    onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-xl transition"
+                  >
+                    Batal
+                  </button>
+                )}
                 <button 
                   onClick={() => {
                     const action = modalConfig.onConfirm;
@@ -1173,7 +1281,7 @@ export default function AbsensiApp() {
                     modalConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
                   }`}
                 >
-                  Ya, Lanjutkan
+                  OK
                 </button>
               </div>
             </div>
@@ -1183,11 +1291,16 @@ export default function AbsensiApp() {
     );
   }
 
-  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH) - 1 KOTAK KAMERA DINAMIS
+  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH) - 1 KOTAK KAMERA DINAMIS & TOMBOL KEMBALI BER-IKON
   return (
     <main className="min-h-screen p-8 bg-gray-100 flex flex-col items-center">
       <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-md text-gray-800">
-        <button onClick={() => setRole(currentUser?.role || "atlet")} className="text-sm text-blue-600 mb-4 font-semibold">← Kembali</button>
+        <button 
+          onClick={() => setRole(currentUser?.role || "atlet")} 
+          className="text-xs text-blue-600 mb-4 font-semibold flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 py-1.5 px-3 rounded-lg transition"
+        >
+          <ArrowLeftIcon className="w-4 h-4" /> Kembali ke Dashboard
+        </button>
         <h1 className="text-xl font-bold mb-1 text-gray-800 uppercase">Form Absen: {currentUser?.nama}</h1>
         <p className="text-xs text-gray-400 mb-4 uppercase">Peran: {currentUser?.role}</p>
 
@@ -1262,7 +1375,7 @@ export default function AbsensiApp() {
         </button>
       </div>
 
-      {/* MODAL KONFIRMASI KUSTOM SERAGAM */}
+      {/* MODAL GLOBAL */}
       {modalConfig.isOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center transform transition-all animate-in fade-in zoom-in-95">
@@ -1276,12 +1389,14 @@ export default function AbsensiApp() {
             <h3 className="text-base font-bold text-gray-800 mb-1">{modalConfig.title}</h3>
             <p className="text-xs text-gray-500 mb-6">{modalConfig.message}</p>
             <div className="flex gap-2">
-              <button 
-                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-xl transition"
-              >
-                Batal
-              </button>
+              {modalConfig.showCancel && (
+                <button 
+                  onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-xl transition"
+                >
+                  Batal
+                </button>
+              )}
               <button 
                 onClick={() => {
                   const action = modalConfig.onConfirm;
@@ -1293,7 +1408,7 @@ export default function AbsensiApp() {
                   modalConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
                 }`}
               >
-                Ya, Lanjutkan
+                OK
               </button>
             </div>
           </div>
