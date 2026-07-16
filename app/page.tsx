@@ -8,7 +8,9 @@ import {
   PrinterIcon, 
   CheckIcon, 
   TrashIcon, 
-  PencilSquareIcon 
+  PencilSquareIcon,
+  CameraIcon,
+  ArrowPathIcon
 } from "@heroicons/react/24/solid";
 
 export default function AbsensiApp() {
@@ -26,6 +28,21 @@ export default function AbsensiApp() {
   const [pelatihList, setPelatihList] = useState<any[]>([]);
 
   const [activeTab, setActiveTab] = useState<string>("absen");
+
+  // State untuk Modal Kustom Konfirmasi Seragam
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'danger' | 'success' | 'warning';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    onConfirm: () => {},
+  });
 
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -132,7 +149,7 @@ export default function AbsensiApp() {
     }
   };
 
-  const handleCreateOrUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+  const executeCreateOrUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const nama = (form.elements.namedItem('nama') as HTMLInputElement).value;
@@ -179,28 +196,54 @@ export default function AbsensiApp() {
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
-    if (confirm("Yakin ingin menghapus user ini?")) {
-      const { error } = await supabase.from('users').delete().eq('id', id);
-      if (error) {
-        alert("Gagal menghapus: " + error.message);
-      } else {
-        alert("User berhasil dihapus.");
-        fetchUsers();
+  const confirmSaveUser = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formTarget = e.currentTarget;
+    setModalConfig({
+      isOpen: true,
+      title: editingUser ? "Konfirmasi Update User" : "Konfirmasi Simpan User",
+      message: "Apakah Anda yakin ingin menyimpan perubahan data pengguna ini?",
+      type: 'warning',
+      onConfirm: () => {
+        executeCreateOrUpdateUser({ preventDefault: () => {} , currentTarget: formTarget } as any);
       }
-    }
+    });
   };
 
-  const handleDeleteAttendance = async (id: number) => {
-    if (confirm("Yakin ingin menghapus data absensi ini?")) {
-      const { error } = await supabase.from('attendances').delete().eq('id', id);
-      if (error) {
-        alert("Gagal menghapus absen: " + error.message);
-      } else {
-        alert("Data absensi berhasil dihapus.");
-        fetchAttendances();
+  const handleDeleteUser = (id: number) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Hapus Pengguna",
+      message: "Yakin ingin menghapus pengguna ini dari sistem?",
+      type: 'danger',
+      onConfirm: async () => {
+        const { error } = await supabase.from('users').delete().eq('id', id);
+        if (error) {
+          alert("Gagal menghapus: " + error.message);
+        } else {
+          alert("User berhasil dihapus.");
+          fetchUsers();
+        }
       }
-    }
+    });
+  };
+
+  const handleDeleteAttendance = (id: number) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Hapus Absensi",
+      message: "Yakin ingin menghapus data absensi ini?",
+      type: 'danger',
+      onConfirm: async () => {
+        const { error } = await supabase.from('attendances').delete().eq('id', id);
+        if (error) {
+          alert("Gagal menghapus absen: " + error.message);
+        } else {
+          alert("Data absensi berhasil dihapus.");
+          fetchAttendances();
+        }
+      }
+    });
   };
 
   const handleUpdateSettings = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -311,56 +354,76 @@ export default function AbsensiApp() {
     }
   };
 
-  const handleApprove = async (id: number) => {
-    const { error } = await supabase.from('attendances').update({ status_approval: 'approved' }).eq('id', id);
-    if (error) {
-      alert("Gagal approve: " + error.message);
-    } else {
-      alert("Absen berhasil disetujui!");
-      fetchAttendances();
-    }
+  const handleApprove = (id: number) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Setujui Kehadiran",
+      message: "Setujui data absensi latihan ini?",
+      type: 'success',
+      onConfirm: async () => {
+        const { error } = await supabase.from('attendances').update({ status_approval: 'approved' }).eq('id', id);
+        if (error) {
+          alert("Gagal approve: " + error.message);
+        } else {
+          alert("Absen berhasil disetujui!");
+          fetchAttendances();
+        }
+      }
+    });
   };
 
-  const handleBulkApprove = async () => {
+  const handleBulkApprove = () => {
     if (selectedAttendanceIds.length === 0) {
       alert("Pilih minimal satu data kehadiran untuk disetujui.");
       return;
     }
-    if (confirm(`Setujui ${selectedAttendanceIds.length} data absensi yang dipilih?`)) {
-      const { error } = await supabase
-        .from('attendances')
-        .update({ status_approval: 'approved' })
-        .in('id', selectedAttendanceIds);
+    setModalConfig({
+      isOpen: true,
+      title: "Persetujuan Massal",
+      message: `Setujui ${selectedAttendanceIds.length} data absensi yang dipilih?`,
+      type: 'success',
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from('attendances')
+          .update({ status_approval: 'approved' })
+          .in('id', selectedAttendanceIds);
 
-      if (error) {
-        alert("Gagal approve massal: " + error.message);
-      } else {
-        alert("Absen terpilih berhasil disetujui secara massal!");
-        setSelectedAttendanceIds([]);
-        fetchAttendances();
+        if (error) {
+          alert("Gagal approve massal: " + error.message);
+        } else {
+          alert("Absen terpilih berhasil disetujui secara massal!");
+          setSelectedAttendanceIds([]);
+          fetchAttendances();
+        }
       }
-    }
+    });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedAttendanceIds.length === 0) {
       alert("Pilih minimal satu data kehadiran untuk dihapus.");
       return;
     }
-    if (confirm(`Yakin ingin menghapus ${selectedAttendanceIds.length} data absensi yang dipilih?`)) {
-      const { error } = await supabase
-        .from('attendances')
-        .delete()
-        .in('id', selectedAttendanceIds);
+    setModalConfig({
+      isOpen: true,
+      title: "Hapus Massal",
+      message: `Yakin ingin menghapus ${selectedAttendanceIds.length} data absensi yang dipilih?`,
+      type: 'danger',
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from('attendances')
+          .delete()
+          .in('id', selectedAttendanceIds);
 
-      if (error) {
-        alert("Gagal menghapus massal: " + error.message);
-      } else {
-        alert("Data absensi terpilih berhasil dihapus secara massal!");
-        setSelectedAttendanceIds([]);
-        fetchAttendances();
+        if (error) {
+          alert("Gagal menghapus massal: " + error.message);
+        } else {
+          alert("Data absensi terpilih berhasil dihapus secara massal!");
+          setSelectedAttendanceIds([]);
+          fetchAttendances();
+        }
       }
-    }
+    });
   };
 
   const toggleSelectAll = (filteredHistoryList: any[]) => {
@@ -438,6 +501,7 @@ export default function AbsensiApp() {
   };
 
   const startCamera = async () => {
+    setPhoto(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) videoRef.current.srcObject = stream;
@@ -448,14 +512,15 @@ export default function AbsensiApp() {
 
   const takePhoto = () => {
     if (videoRef.current && canvasRef.current) {
-      const width = videoRef.current.videoWidth;
-      const height = videoRef.current.videoHeight;
+      const width = videoRef.current.videoWidth || 640;
+      const height = videoRef.current.videoHeight || 480;
       canvasRef.current.width = width;
       canvasRef.current.height = height;
       const ctx = canvasRef.current.getContext("2d");
       if (ctx) {
         ctx.drawImage(videoRef.current, 0, 0, width, height);
-        setPhoto(canvasRef.current.toDataURL("image/png"));
+        const dataUrl = canvasRef.current.toDataURL("image/png");
+        setPhoto(dataUrl);
       }
     }
   };
@@ -508,7 +573,7 @@ export default function AbsensiApp() {
     setSignature(null);
   };
 
-  const handleKirimAbsen = async () => {
+  const executeKirimAbsen = async () => {
     if (!role || !currentUser) return;
     
     try {
@@ -561,6 +626,16 @@ export default function AbsensiApp() {
     } catch (error: any) {
       alert("Gagal mengirim absen: " + error.message);
     }
+  };
+
+  const confirmKirimAbsen = () => {
+    setModalConfig({
+      isOpen: true,
+      title: "Konfirmasi Kirim Absen",
+      message: "Pastikan foto selfie dan tanda tangan Anda sudah benar. Kirim absensi sekarang?",
+      type: 'success',
+      onConfirm: executeKirimAbsen
+    });
   };
 
   if (!role) {
@@ -628,20 +703,23 @@ export default function AbsensiApp() {
         `}} />
         <div className="bg-white p-4 md:p-6 rounded-xl shadow-md w-full max-w-3xl text-gray-800">
           
-          {/* Header Dashboard: Info User di Kiri, Tombol Keluar di Kanan */}
           <div className="flex justify-between items-center mb-4 pb-3 border-b no-print">
             <div>
               <h1 className="text-base md:text-lg font-bold text-gray-800 uppercase">Dashboard {role}</h1>
               <p className="text-xs text-gray-500 font-medium">{currentUser?.nama}</p>
             </div>
             <button 
-              onClick={async () => { 
-                if (confirm("Apakah Anda yakin ingin keluar?")) {
+              onClick={() => setModalConfig({
+                isOpen: true,
+                title: "Konfirmasi Keluar",
+                message: "Apakah Anda yakin ingin keluar dari sesi ini?",
+                type: 'danger',
+                onConfirm: async () => {
                   await supabase.auth.signOut(); 
                   setRole(null); 
-                  setCurrentUser(null); 
+                  setCurrentUser(null);
                 }
-              }} 
+              })} 
               className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg shadow transition-all flex items-center gap-1"
             >
               Keluar
@@ -676,7 +754,6 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* TAB NAVIGASI UTAMA: RESPONSIF GRID DI HP */}
           {role !== "atlet" && (
             <div className="grid grid-cols-3 gap-2 mb-6 no-print">
               <button 
@@ -719,10 +796,8 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* KONTEN TAB 1: DAFTAR HADIR & REKAP TOTAL DI 1 PAGE */}
           {(activeTab === "absen" || role === "atlet") && (
             <div className="flex flex-col gap-6">
-              {/* Bagian Rekap Total Kehadiran */}
               <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-sm font-bold text-indigo-900">
@@ -770,7 +845,6 @@ export default function AbsensiApp() {
                 )}
               </div>
 
-              {/* Bagian Daftar Kehadiran yang Masuk */}
               <div>
                 <h2 className="text-sm font-bold text-gray-800 mb-4">Daftar Kehadiran yang Masuk</h2>
                 
@@ -822,7 +896,6 @@ export default function AbsensiApp() {
                   </div>
                 )}
 
-                {/* Tombol Aksi Massal Dinamis (Menggunakan Ikon) */}
                 {role !== "atlet" && filteredHistoryList.length > 0 && (() => {
                   const selectedItems = filteredHistoryList.filter(i => selectedAttendanceIds.includes(i.id));
                   const unapprovedItems = selectedItems.filter(i => i.status_approval !== 'approved');
@@ -903,7 +976,6 @@ export default function AbsensiApp() {
                 )}
               </div>
 
-              {/* Tanda Tangan Mengetahui Pelatih/Pembimbing: HIDDEN di layar HP/Desktop, HANYA MUNCUL SAAT PRINT/PDF */}
               {role !== "atlet" && (
                 <div className="mt-12 pt-8 border-t hidden print:flex justify-end">
                   <div className="text-center w-64">
@@ -921,10 +993,9 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* KONTEN TAB 2: KELOLA PENGGUNA */}
           {activeTab === "users" && role === "admin" && (
             <div className="flex flex-col gap-4">
-              <form onSubmit={handleCreateOrUpdateUser} className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-gray-800">
+              <form onSubmit={confirmSaveUser} className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-gray-800">
                 <h2 className="text-sm font-bold text-purple-800 mb-2">
                   {editingUser ? `Edit Data User: ${editingUser.nama}` : "Tambah User Baru & Buat Akun Auth"}
                 </h2>
@@ -1036,10 +1107,19 @@ export default function AbsensiApp() {
             </div>
           )}
 
-          {/* KONTEN TAB 3: PENGATURAN RADIUS */}
           {activeTab === "settings" && role === "admin" && (
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 text-gray-800">
-              <form onSubmit={handleUpdateSettings}>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formTarget = e.currentTarget;
+                setModalConfig({
+                  isOpen: true,
+                  title: "Simpan Pengaturan",
+                  message: "Simpan perubahan radius dan titik koordinat pusat absen?",
+                  type: 'warning',
+                  onConfirm: () => handleUpdateSettings({ preventDefault: () => {}, currentTarget: formTarget } as any)
+                });
+              }}>
                 <h2 className="text-sm font-bold text-blue-800 mb-2">Pengaturan Titik Pusat & Radius Absen</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
                   <div>
@@ -1061,11 +1141,49 @@ export default function AbsensiApp() {
           )}
 
         </div>
+
+        {/* MODAL KONFIRMASI KUSTOM SERAGAM */}
+        {modalConfig.isOpen && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center transform transition-all animate-in fade-in zoom-in-95">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                modalConfig.type === 'danger' ? 'bg-red-100 text-red-500' :
+                modalConfig.type === 'success' ? 'bg-green-100 text-green-500' : 'bg-amber-100 text-amber-500'
+              }`}>
+                {modalConfig.type === 'danger' ? <TrashIcon className="w-6 h-6" /> :
+                 modalConfig.type === 'success' ? <CheckIcon className="w-6 h-6" /> : <PencilSquareIcon className="w-6 h-6" />}
+              </div>
+              <h3 className="text-base font-bold text-gray-800 mb-1">{modalConfig.title}</h3>
+              <p className="text-xs text-gray-500 mb-6">{modalConfig.message}</p>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-xl transition"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={() => {
+                    const action = modalConfig.onConfirm;
+                    setModalConfig({ ...modalConfig, isOpen: false });
+                    action();
+                  }}
+                  className={`flex-1 text-white text-xs font-semibold py-2.5 rounded-xl transition shadow-md ${
+                    modalConfig.type === 'danger' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' :
+                    modalConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                  }`}
+                >
+                  Ya, Lanjutkan
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
   }
 
-  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH)
+  // TAMPILAN FORM ABSEN (ATLET ATAU PELATIH) - 1 KOTAK KAMERA DINAMIS
   return (
     <main className="min-h-screen p-8 bg-gray-100 flex flex-col items-center">
       <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-md text-gray-800">
@@ -1083,14 +1201,33 @@ export default function AbsensiApp() {
           )}
         </div>
 
+        {/* 1 KOTAK KAMERA DINAMIS */}
         <div className="mb-4">
           <label className="block text-sm font-semibold mb-1 text-gray-700">Foto Selfie</label>
-          <div className="flex gap-2 mb-2">
-            <button onClick={takePhoto} className="bg-amber-600 text-sm py-1.5 px-4 rounded font-semibold w-full text-white">Ambil Foto</button>
+          <div className="relative w-full rounded overflow-hidden bg-black h-48 border mb-2 flex items-center justify-center">
+            {photo ? (
+              <img src={photo} alt="Hasil Selfie" className="w-full h-full object-cover" />
+            ) : (
+              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover"></video>
+            )}
           </div>
-          <video ref={videoRef} autoPlay playsInline className="w-full rounded bg-black h-48 object-cover mb-2"></video>
           <canvas ref={canvasRef} className="hidden"></canvas>
-          {photo && <img src={photo} alt="Selfie" className="w-full rounded h-48 object-cover border mb-2" />}
+
+          {photo ? (
+            <button 
+              onClick={startCamera} 
+              className="bg-amber-600 text-white text-xs py-2 px-4 rounded-lg font-semibold w-full flex items-center justify-center gap-1.5 shadow"
+            >
+              <ArrowPathIcon className="w-4 h-4" /> Foto Ulang
+            </button>
+          ) : (
+            <button 
+              onClick={takePhoto} 
+              className="bg-blue-600 text-white text-xs py-2 px-4 rounded-lg font-semibold w-full flex items-center justify-center gap-1.5 shadow"
+            >
+              <CameraIcon className="w-4 h-4" /> Ambil Foto
+            </button>
+          )}
         </div>
 
         <div className="mb-4 w-full">
@@ -1113,13 +1250,55 @@ export default function AbsensiApp() {
         </div>
 
         <button 
-          disabled={!isValidLocation}
-          onClick={handleKirimAbsen}
-          className={`w-full py-2.5 rounded-lg font-semibold mt-4 text-white ${isValidLocation ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+          disabled={!isValidLocation || !photo || !signature}
+          onClick={confirmKirimAbsen}
+          className={`w-full py-2.5 rounded-lg font-semibold mt-4 text-white ${
+            isValidLocation && photo && signature 
+              ? 'bg-blue-600 hover:bg-blue-700 shadow-md' 
+              : 'bg-gray-400 cursor-not-allowed'
+          }`}
         >
           {isValidLocation ? 'Kirim Absen' : 'Diluar Jangkauan Lokasi'}
         </button>
       </div>
+
+      {/* MODAL KONFIRMASI KUSTOM SERAGAM */}
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center transform transition-all animate-in fade-in zoom-in-95">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+              modalConfig.type === 'danger' ? 'bg-red-100 text-red-500' :
+              modalConfig.type === 'success' ? 'bg-green-100 text-green-500' : 'bg-amber-100 text-amber-500'
+            }`}>
+              {modalConfig.type === 'danger' ? <TrashIcon className="w-6 h-6" /> :
+               modalConfig.type === 'success' ? <CheckIcon className="w-6 h-6" /> : <PencilSquareIcon className="w-6 h-6" />}
+            </div>
+            <h3 className="text-base font-bold text-gray-800 mb-1">{modalConfig.title}</h3>
+            <p className="text-xs text-gray-500 mb-6">{modalConfig.message}</p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2.5 rounded-xl transition"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={() => {
+                  const action = modalConfig.onConfirm;
+                  setModalConfig({ ...modalConfig, isOpen: false });
+                  action();
+                }}
+                className={`flex-1 text-white text-xs font-semibold py-2.5 rounded-xl transition shadow-md ${
+                  modalConfig.type === 'danger' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' :
+                  modalConfig.type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-600/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                }`}
+              >
+                Ya, Lanjutkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
