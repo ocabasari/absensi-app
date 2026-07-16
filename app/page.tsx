@@ -636,20 +636,26 @@ export default function AbsensiApp() {
           }
         `}} />
         <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-3xl text-gray-800">
-          <button 
-  onClick={async () => { 
-    await supabase.auth.signOut(); 
-    setRole(null); 
-    setCurrentUser(null); 
-  }} 
-  className="text-sm text-blue-600 mb-4 font-semibold no-print"
->
-  ← Keluar / Ganti Akun ({currentUser?.nama})
-</button>
+          {/* Header Dashboard: Info User di Kiri, Tombol Keluar di Kanan */}
+          <div className="flex justify-between items-center mb-6 pb-3 border-b no-print">
+            <div>
+              <h1 className="text-lg font-bold text-gray-800 uppercase">Dashboard {role}</h1>
+              <p className="text-xs text-gray-500 font-medium">{currentUser?.nama}</p>
+            </div>
+            <button 
+              onClick={async () => { 
+                await supabase.auth.signOut(); 
+                setRole(null); 
+                setCurrentUser(null); 
+              }} 
+              className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold py-1.5 px-3 rounded-lg shadow transition-all flex items-center gap-1"
+            >
+              Keluar
+            </button>
+          </div>
           
           <div className="flex justify-between items-center mb-4 no-print">
-            <h1 className="text-xl font-bold text-gray-800 uppercase">Dashboard {role}: {currentUser?.nama}</h1>
-            {/* Tombol Cetak / Simpan PDF HANYA Tampil di Tab Daftar Hadir & Rekap */}
+            <h2 className="text-sm font-semibold text-gray-600 uppercase">Panel Utama</h2>
             {role !== "atlet" && activeTab === "absen" && (
               <button 
                 onClick={() => window.print()} 
