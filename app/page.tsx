@@ -950,29 +950,27 @@ export default function AbsensiApp() {
                   <div>
                     <label className="text-xs text-gray-600 font-semibold">Role</label>
                     <select 
-                      name="role" 
-                      value={editingUser?.role || "atlet"} 
-                      onChange={(e) => setEditingUser(editingUser ? {...editingUser, role: e.target.value} : { role: e.target.value, coach_id: "" })} 
-                      className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
-                    >
-                      <option value="atlet">Atlet</option>
-                      <option value="pelatih">Pelatih</option>
-                      <option value="admin">Admin</option>
-                    </select>
+  name="role" 
+  defaultValue={editingUser?.role || "atlet"} 
+  className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
+>
+  <option value="atlet">Atlet</option>
+  <option value="pelatih">Pelatih</option>
+  <option value="admin">Admin</option>
+</select>
                   </div>
                   <div className="col-span-2">
                     <label className="text-xs text-gray-600 font-semibold">Pelatih Pembimbing</label>
                     <select 
-                      name="coach_id" 
-                      value={editingUser?.coach_id || ""} 
-                      onChange={(e) => setEditingUser(editingUser ? {...editingUser, coach_id: e.target.value} : { role: "atlet", coach_id: e.target.value })} 
-                      className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
-                    >
-                      <option value="">-- Tanpa Pelatih / Mandiri --</option>
-                      {pelatihList.map((p) => (
-                        <option key={p.id} value={p.id}>{p.nama}</option>
-                      ))}
-                    </select>
+  name="coach_id" 
+  defaultValue={editingUser?.coach_id || ""} 
+  className="border p-1.5 rounded bg-white text-gray-800 text-xs w-full"
+>
+  <option value="">-- Tanpa Pelatih / Mandiri --</option>
+  {pelatihList.map((p) => (
+    <option key={p.id} value={p.id}>{p.nama}</option>
+  ))}
+</select>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-2">
