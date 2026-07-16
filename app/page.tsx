@@ -636,7 +636,16 @@ export default function AbsensiApp() {
           }
         `}} />
         <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-3xl text-gray-800">
-          <button onClick={() => { setRole(null); setCurrentUser(null); }} className="text-sm text-blue-600 mb-4 font-semibold no-print">← Keluar / Ganti Akun ({currentUser?.nama})</button>
+          <button 
+  onClick={async () => { 
+    await supabase.auth.signOut(); 
+    setRole(null); 
+    setCurrentUser(null); 
+  }} 
+  className="text-sm text-blue-600 mb-4 font-semibold no-print"
+>
+  ← Keluar / Ganti Akun ({currentUser?.nama})
+</button>
           
           <div className="flex justify-between items-center mb-4 no-print">
             <h1 className="text-xl font-bold text-gray-800 uppercase">Dashboard {role}: {currentUser?.nama}</h1>
